@@ -5,6 +5,7 @@ import { ChatArea } from './components/ChatArea';
 import { ArchitectureDocs } from './components/ArchitectureDocs';
 import { AuthScreen } from './components/AuthScreen';
 import { CallOverlay } from './components/CallOverlay';
+import { SettingsScreen } from './components/SettingsScreen';
 import { User, Server, Channel, Message, CallState, AppView } from './types';
 import { 
   Users, 
@@ -33,8 +34,8 @@ const INITIAL_CHANNELS: Channel[] = [
 ];
 
 const INITIAL_MESSAGES: Message[] = [
-  { id: 'm1', content: 'Bienvenue sur Nexus ! Cliquez sur le bouton "Architecture" en bas à gauche pour voir la spec technique.', sender: 'System', timestamp: new Date().toISOString(), channelId: 'c1' },
-  { id: 'm2', content: 'Le système de fichiers supporte jusqu\'à 2Go par upload.', sender: 'Alice', timestamp: new Date().toISOString(), channelId: 'c1' },
+  { id: 'm1', content: 'Bienvenue sur Nexus ! Cliquez sur le bouton "Architecture" en bas à gauche pour voir la spec technique ou **System** pour les paramètres.', sender: 'System', timestamp: new Date().toISOString(), channelId: 'c1' },
+  { id: 'm2', content: 'Le système de fichiers supporte jusqu\'à `2Go` par upload.', sender: 'Alice', timestamp: new Date().toISOString(), channelId: 'c1' },
 ];
 
 export default function App() {
@@ -45,6 +46,8 @@ export default function App() {
   const [currentView, setCurrentView] = useState<AppView>('chat');
   const [callState, setCallState] = useState<CallState>({ status: 'idle', duration: 0 });
   const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES);
+  const [showSettings, setShowSettings] = useState(false);
+  const [currentUser, setCurrentUser] = useState({ username: 'DevUser', avatar: '' });
   
   // Handlers
   const handleLogin = () => setIsAuthenticated(true);
@@ -78,6 +81,10 @@ export default function App() {
     setCallState({ status: 'idle', duration: 0 });
   };
 
+  const handleUpdateUser = (data: any) => {
+    setCurrentUser(prev => ({ ...prev, ...data }));
+  };
+
   if (!isAuthenticated) {
     return <AuthScreen onLogin={handleLogin} />;
   }
@@ -93,7 +100,11 @@ export default function App() {
 
       {/* 2. Channel List (Sidebar) */}
       <div className="flex flex-col w-60 bg-discord-darker h-full">
-        <header className="h-12 flex items-center px-4 font-bold shadow-sm border-b border-gray-900 hover:bg-discord-light transition cursor-pointer">
+        <header 
+          className="h-12 flex items-center px-4 font-bold shadow-sm border-b border-gray-900 hover:bg-discord-light transition cursor-pointer"
+          onClick={() => setCurrentView(currentView === 'chat' ? 'docs' : 'chat')}
+          title="Toggle Docs/Chat"
+        >
           {activeServer.name}
         </header>
 
@@ -110,11 +121,12 @@ export default function App() {
         {/* User Controls Footer */}
         <div className="mt-auto bg-discord-darkest p-2 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-discord-primary relative">
+            <div className="w-8 h-8 rounded-full bg-discord-primary relative overflow-hidden flex items-center justify-center">
+              {currentUser.avatar ? <img src={currentUser.avatar} className="w-full h-full object-cover" /> : <span className="text-white font-bold">D</span>}
               <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-discord-darkest"></span>
             </div>
             <div className="text-sm">
-              <div className="font-bold text-white">DevUser</div>
+              <div className="font-bold text-white truncate max-w-[80px]">{currentUser.username}</div>
               <div className="text-xs text-discord-muted">#1337</div>
             </div>
           </div>
@@ -122,9 +134,9 @@ export default function App() {
             <button className="p-1 hover:bg-discord-light rounded"><Mic size={16} /></button>
             <button className="p-1 hover:bg-discord-light rounded"><Headphones size={16} /></button>
             <button 
-              className={`p-1 hover:bg-discord-light rounded ${currentView === 'docs' ? 'text-discord-primary' : ''}`}
-              onClick={() => setCurrentView(currentView === 'docs' ? 'chat' : 'docs')}
-              title="Documentation Technique"
+              className={`p-1 hover:bg-discord-light rounded ${showSettings ? 'text-white' : ''}`}
+              onClick={() => setShowSettings(true)}
+              title="Paramètres Utilisateur"
             >
               <Settings size={16} />
             </button>
@@ -168,6 +180,15 @@ export default function App() {
           state={callState} 
           channelName={activeChannel.type === 'voice' ? activeChannel.name : 'Appel en cours'}
           onHangup={handleEndCall}
+        />
+      )}
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <SettingsScreen 
+          onClose={() => setShowSettings(false)}
+          currentUser={currentUser}
+          onUpdateUser={handleUpdateUser}
         />
       )}
     </div>

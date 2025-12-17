@@ -12,6 +12,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ messages, channelName, onSen
   const [inputValue, setInputValue] = useState('');
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -30,34 +31,70 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ messages, channelName, onSen
     }
   };
 
+  const handleFileUpload = (file: File) => {
+    // Simulate large file upload logic
+    if (file.size > 2 * 1024 * 1024 * 1024) { // 2GB
+       alert("Fichier trop volumineux (> 2 Go)");
+       return;
+    }
+    
+    // Simulate upload progress
+    setIsUploading(true);
+    setUploadProgress(0);
+    const interval = setInterval(() => {
+      setUploadProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(interval);
+          setIsUploading(false);
+          onSendMessage(`Fichier partagé : ${file.name}`, file);
+          return 100;
+        }
+        return prev + 10;
+      });
+    }, 200);
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      // Simulate large file upload logic
-      if (file.size > 2 * 1024 * 1024 * 1024) { // 2GB
-         alert("Fichier trop volumineux (> 2 Go)");
-         return;
-      }
-      
-      // Simulate upload progress
-      setIsUploading(true);
-      setUploadProgress(0);
-      const interval = setInterval(() => {
-        setUploadProgress(prev => {
-          if (prev >= 100) {
-            clearInterval(interval);
-            setIsUploading(false);
-            onSendMessage(`Fichier partagé : ${file.name}`, file);
-            return 100;
-          }
-          return prev + 10;
-        });
-      }, 200);
+      handleFileUpload(e.target.files[0]);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleFileUpload(e.dataTransfer.files[0]);
     }
   };
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 bg-discord-dark">
+    <div 
+      className="flex-1 flex flex-col min-h-0 bg-discord-dark relative"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Drag Overlay */}
+      {isDragging && (
+        <div className="absolute inset-0 bg-discord-primary/80 z-50 flex flex-col items-center justify-center backdrop-blur-sm transition-all duration-200 pointer-events-none">
+          <UploadCloud size={64} className="text-white mb-4 animate-bounce" />
+          <div className="text-white text-2xl font-bold">Déposez votre fichier ici</div>
+          <div className="text-white/80 mt-2">Envoyer vers #{channelName}</div>
+        </div>
+      )}
+
       {/* Messages List */}
       <div className="flex-1 overflow-y-auto p-4 custom-scrollbar flex flex-col">
         <div className="mt-auto"> {/* Pushes messages to bottom if few */}
@@ -93,8 +130,13 @@ export const ChatArea: React.FC<ChatAreaProps> = ({ messages, channelName, onSen
                       <span className="text-xs text-discord-muted">{new Date(msg.timestamp).toLocaleDateString()}</span>
                     </div>
                   )}
+                  
                   <p className={`text-discord-text leading-relaxed whitespace-pre-wrap ${msg.attachment ? 'italic text-discord-primary' : ''}`}>
-                    {msg.content}
+                    {msg.content.split(/(\*\*.*?\*\*|`.*?`)/g).map((part, i) => {
+                      if (part.startsWith('**') && part.endsWith('**')) return <strong key={i} className="font-bold text-white">{part.slice(2, -2)}</strong>;
+                      if (part.startsWith('`') && part.endsWith('`')) return <code key={i} className="bg-discord-darker px-1 rounded font-mono text-sm">{part.slice(1, -1)}</code>;
+                      return part;
+                    })}
                   </p>
                   
                   {/* Attachment Preview */}
