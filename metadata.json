@@ -1,0 +1,8 @@
+{
+  "name": "Copy of Nexus - Discord Clone Architecture",
+  "description": "Prototype d'application de communication type Discord démontrant l'architecture Full-Stack demandée, incluant l'interface de messagerie, la simulation d'appel WebRTC et la documentation technique intégrée.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
